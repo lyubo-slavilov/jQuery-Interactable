@@ -1,6 +1,5 @@
 /*
 author: Lyubomir Slavilov
-version: 0.1
 */
 (function($){
 	//CLASSES
