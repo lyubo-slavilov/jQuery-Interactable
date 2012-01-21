@@ -92,58 +92,129 @@ author: Lyubomir Slavilov
 			}else{
 				//initialize other objects
 				
-				return this.each(function(){
+				return this.each(function(idx, el){
 					var $that = $(this);
-					
-					//fixes some hilarious bug - the DOMWindow object is in the set ???
-					if($that[0] == $window) return;
-					
 					options = $.extend({
 						drag:{
 							stop:function(){}
 						},
 						axis: 'both',
-						mass: 1
+						mass: 1,
+						maxTravel: 0,
+						constraintBy: 'firstEdge'
 					}, options);
+					
 					$that.addClass('interactable');
-					$that.attr('position', 'absolute');
+					$(this).data('interactable', {});
+					
 					//used to prevent movements by axis if the other axis is set in options
 					var maskX = (options.axis == 'both' || options.axis == 'x') ? 1:0;
 					var maskY = (options.axis == 'both' || options.axis == 'y') ? 1:0;
 
-					var customStop = options.drag.stop
-
-					//make it dragable
-
-					//extend the draggable stop method
+					
+					
+					//extend the ANIMATION STEP method
+					var stepFunction = function(correction, Now, Fx){
+						var $elem = $(Fx.elem);
+						var corr;
+						if(Fx.prop == 'left'){
+							corr = correction.x
+						}else{
+							corr = correction.y;
+						}
+						
+						//Fx.end = 100;
+						
+						var parent = $elem.parent();
+						var out = null;
+						
+						if(Fx.prop == 'left'){
+							if(options.constraintBy == 'firstEdge'){
+								out = ($elem.offset().left < parent.offset().left-100)?0:null;
+								if(out===null)
+									out = ($elem.offset().left + $elem.width() > parent.offset().left + parent.width()+100)?
+												parent.offset().left + parent.width() - $elem.width():
+												null;
+							}else{
+								out = ($elem.offset().left + $elem.width() < parent.offset().left)?0:null;
+								if(out === null)
+									out = ($elem.offset().left > parent.offset().left + parent.width())?
+												parent.offset().left + parent.width() - $elem.width():
+												null;
+							}
+						}else{
+							if(options.constraintBy == 'firstEdge'){
+								out = ($elem.offset().top < parent.offset().top-100)?0:null;
+								if(out===null)
+									out = ($elem.offset().top + $elem.height() > parent.offset().top + parent.height()+100)?
+												parent.offset().top + parent.height() - $elem.height():
+												null;
+							}else{
+								out = ($elem.offset().top + $elem.height() < parent.offset().top)?0:null;
+								if(out === null)
+									out = ($elem.offset().top > parent.offset().top + parent.height())?
+												parent.offset().top + parent.height() - $elem.height():
+												null;
+							}
+						}
+						if(out !== null){
+							Fx.end = out+corr;
+							Fx.start = Now;
+						}
+					};
+					
+					//extend the DRAGGABLE STOP handler
+					var customStop = options.drag.stop;
 					var extendedStop = function(event, ui){
+						if(this == window) return;
 						var ki = $window.data('interactable').kinematics;
 						var a = 0.003*Math.abs(ki.options.friction)*options.mass; //do not allow negative friction
 						
 						//TODO add mass feature of the objects into the game 
-
+						
 						if(a==0) a = 0.00001; //almost no friction
 						var t =  ki.speed.w/a;
 						var s = ki.speed.w*t - t*t*a/2;
-						var newPosition = ki.speed.direction().scale(s);
+						
+						if(options.maxTravel < s && options.maxTravel > 0){
+							s = options.maxTravel;
+							t = Math.sqrt(s/a);
+						}
+						var newPosition = ki.speed.direction().
+							scale(s).
+							add($.interactableVector(ui.position.left, ui.position.top));
+						$(this).data('interactable').targetPos = newPosition;
 						if(!ui) return;
+						
+						var corrVector = $.interactableVector(ui.position.left - $(this).position().left, ui.position.top - $(this).position().top )
 						$(this).animate({
-							left: ui.position.left + newPosition.x*maskX,
-							top: ui.position.top + newPosition.y*maskY
-						}, t, 'easeOutQuad');
-						//callout the user defined stop method
+							left: newPosition.x*maskX,
+							top: newPosition.y*maskY
+						},{
+							duration: t,
+							easing: 'easeOutQuad', 
+							step: function(now, fx){
+									stepFunction(corrVector, now, fx);
+							}
+						});
+						//callout the user defined stop handler
 						if(typeof(customStop) == 'function') customStop();
 					};
 
-					//extend the draggable start method
+					//extend the DRAGGABLE START handler
 					var customStart = options.drag.start;
 					var extendedStart = function(){
 						//stop all animations
 						$(this).stop();
 						if(typeof(customStart) == 'function') customStart();
 					}
+					
+					
 					options.drag.stop = extendedStop;
 					options.drag.start = extendedStart;
+					//options.drag.drag = extendedDrag;
+					
+					//make it dragable
 					$that.draggable(options.drag);
 				});
 			}
