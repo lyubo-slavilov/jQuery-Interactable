@@ -115,6 +115,7 @@ author: Lyubomir Slavilov
 					
 					//extend the ANIMATION STEP method
 					var stepFunction = function(correction, Now, Fx){
+						if(!options.constraint) return;
 						var $elem = $(Fx.elem);
 						var corr;
 						if(Fx.prop == 'left'){
@@ -129,7 +130,7 @@ author: Lyubomir Slavilov
 						var out = null;
 						
 						if(Fx.prop == 'left'){
-							if(options.constraintBy == 'firstEdge'){
+							if(options.constraint == 'firstEdge'){
 								out = ($elem.offset().left < parent.offset().left-100)?0:null;
 								if(out===null)
 									out = ($elem.offset().left + $elem.width() > parent.offset().left + parent.width()+100)?
@@ -143,7 +144,7 @@ author: Lyubomir Slavilov
 												null;
 							}
 						}else{
-							if(options.constraintBy == 'firstEdge'){
+							if(options.constraint == 'firstEdge'){
 								out = ($elem.offset().top < parent.offset().top-100)?0:null;
 								if(out===null)
 									out = ($elem.offset().top + $elem.height() > parent.offset().top + parent.height()+100)?
