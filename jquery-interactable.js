@@ -101,7 +101,7 @@ author: Lyubomir Slavilov
 						axis: 'both',
 						mass: 1,
 						maxTravel: 0,
-						constraintBy: 'firstEdge'
+						constraint: 'firstEdge'
 					}, options);
 					
 					$that.addClass('interactable');
@@ -130,33 +130,21 @@ author: Lyubomir Slavilov
 						var out = null;
 						
 						if(Fx.prop == 'left'){
-							if(options.constraint == 'firstEdge'){
-								out = ($elem.offset().left < parent.offset().left-100)?0:null;
-								if(out===null)
-									out = ($elem.offset().left + $elem.width() > parent.offset().left + parent.width()+100)?
-												parent.offset().left + parent.width() - $elem.width():
-												null;
-							}else{
-								out = ($elem.offset().left + $elem.width() < parent.offset().left)?0:null;
-								if(out === null)
-									out = ($elem.offset().left > parent.offset().left + parent.width())?
-												parent.offset().left + parent.width() - $elem.width():
-												null;
-							}
-						}else{
-							if(options.constraint == 'firstEdge'){
-								out = ($elem.offset().top < parent.offset().top-100)?0:null;
-								if(out===null)
-									out = ($elem.offset().top + $elem.height() > parent.offset().top + parent.height()+100)?
-												parent.offset().top + parent.height() - $elem.height():
-												null;
-							}else{
-								out = ($elem.offset().top + $elem.height() < parent.offset().top)?0:null;
-								if(out === null)
-									out = ($elem.offset().top > parent.offset().top + parent.height())?
-												parent.offset().top + parent.height() - $elem.height():
-												null;
-							}
+							out = $elem.interactable('_recalcAnimation',
+								options.constraint,
+								$elem.offset().left, 
+								$elem.width(), 
+								parent.offset().left, 
+								parent.width()
+							);
+						}else if(Fx.prop == 'top'){
+							out = $elem.interactable('_recalcAnimation',
+								options.constraint,
+								$elem.offset().top, 
+								$elem.height(), 
+								parent.offset().top, 
+								parent.height()
+							);
 						}
 						if(out !== null){
 							Fx.end = out+corr;
@@ -196,6 +184,9 @@ author: Lyubomir Slavilov
 							easing: 'easeOutQuad', 
 							step: function(now, fx){
 									stepFunction(corrVector, now, fx);
+							},
+							complete: function(){
+								if(typeof(options.complete)=='function') options.complete(this);
 							}
 						});
 						//callout the user defined stop handler
@@ -228,6 +219,27 @@ author: Lyubomir Slavilov
 			}else{
 				$(this).draggable('destroy');
 			}
+		},
+		_recalcAnimation: function(type, c, d, pc, pd){
+			var b = 0;
+			var out = null;
+			if(type == 'magnet'){
+				if(d >= pd){
+					out = (c > pc+b)?0:null;
+					if(out === null)
+						out = (c + d < pc+pd-b)?(pc + pd - d):null;
+				}else type = 'firstEdge';
+			}
+			if(type == 'firstEdge'){
+				out = (c < pc-b)?0:null;
+				if(out===null)
+					out = (c + d > pc + pd+b)?pc +pd - d:null;
+			}else if(type == 'lastEdge'){
+				out = (c + d <pc-b)?0:null;
+				if(out === null)
+					out = (c > pc+ pd)?pc +pd - d:null;
+			}
+			return out;
 		}
 	};
 	
